@@ -7,15 +7,20 @@
 //
 
 #import "ViewController.h"
+#import "Repo.h"
 
 @interface ViewController () <UITableViewDelegate, UITableViewDataSource>
+
 @property (weak, nonatomic) IBOutlet UITableView * tableView;
-@property (nonatomic) NSArray * repos;
+@property (nonatomic) NSMutableArray <Repo *> * repos;
+
 @end
 
 @implementation ViewController
+
 - (void)viewDidLoad {
     [super viewDidLoad];
+    self.repos = [[NSMutableArray alloc] init];
     //Create a new NSURL object from the GitHub api url string
     NSURL *url = [NSURL URLWithString:@"https://api.github.com/users/cookiekaze/repos"];
     
@@ -51,7 +56,6 @@
         //NSJSONSerialization used to convert the NSData to JSON
         NSError *jsonError = nil;
         NSArray *repos = [NSJSONSerialization JSONObjectWithData:data options:0 error:&jsonError];
-        self.repos = repos;
         
         if (jsonError) {
             //if the server actually returned XML to us, then we want to handle it here.
@@ -59,16 +63,18 @@
             return;
         }
         
+        // If we reach this point, we have successfully retrieved the JSON from the API
+        for (NSDictionary *repo in repos) { // 4
+            NSString *repoName = repo[@"name"];
+            NSString *url = repo[@"html_url"];
+            Repo * myRepo = [[Repo alloc] initWithName:repoName andURL:url];
+            [self.repos addObject:myRepo];
+        }
         
+        //Reload table on main thread to show new data
         [[NSOperationQueue mainQueue] addOperationWithBlock:^(){
             [self.tableView reloadData];
         }];
-        
-        // If we reach this point, we have successfully retrieved the JSON from the API
-        //        for (NSDictionary *repo in repos) { // 4
-        //            NSString *repoName = repo[@"name"];
-        //            NSLog(@"repo: %@", repoName);
-        //        }
     }];
     
     //A task is created in a suspended state, so we need to resume it (Other options: suspend, resume and cancel)
@@ -83,11 +89,10 @@
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
     UITableViewCell * cell = [tableView dequeueReusableCellWithIdentifier:@"cell"];
-    NSDictionary * repo = self.repos[indexPath.row];
-    cell.textLabel.text = repo[@"name"];
+    Repo * repo = self.repos[indexPath.row];
+    cell.textLabel.text = repo.name;
     return cell;
 }
-
 
 @end
 
